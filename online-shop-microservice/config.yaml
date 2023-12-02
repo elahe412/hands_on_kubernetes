@@ -1,8 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: email
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: emailservice
+  namespace: email
 spec:
   selector:
     matchLabels:
@@ -20,6 +25,23 @@ spec:
         env:
         - name: PORT
           value: "8080"
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:8080"]
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:8080"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi   
+          limits: 
+            cpu: 200m
+            memory: 128Mi
+
+
 ---
 apiVersion: v1
 kind: Service
@@ -53,6 +75,15 @@ spec:
         image: gcr.io/google-samples/microservices-demo/recommendationservice:v0.2.3
         ports:
         - containerPort: 8080
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:8080"]        
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:8080"]
+
         env:
         - name: PORT
           value: "8080" 
@@ -95,6 +126,15 @@ spec:
         image: gcr.io/google-samples/microservices-demo/productcatalogservice:v0.2.3
         ports:
         - containerPort: 3550
+        livenessProbe:
+          periodSeconds: 5
+          httpGet:
+            path: /health
+            port: 3550   
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:3550"]
         env:
         - name: PORT
           value: "3550" 
@@ -136,7 +176,16 @@ spec:
         - containerPort: 50051
         env:
         - name: PORT
-          value: "50051"         
+          value: "50051"      
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:50051"]             
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:50051"]
+
 ---
 apiVersion: v1
 kind: Service
@@ -175,7 +224,16 @@ spec:
         - containerPort: 7000
         env:
         - name: PORT
-          value: "7000"             
+          value: "7000"       
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:7000"]                   
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7000"]
+
 ---
 apiVersion: v1
 kind: Service
@@ -213,7 +271,16 @@ spec:
         - containerPort: 50051
         env:
         - name: PORT
-          value: "50051"            
+          value: "50051"
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:50051"]                      
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:50051"]
+
 ---
 apiVersion: v1
 kind: Service
@@ -253,6 +320,15 @@ spec:
         env:
         - name: PORT
           value: "9555"
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:9555"]          
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:9555"]
+
 
 ---
 apiVersion: v1
@@ -295,6 +371,15 @@ spec:
           value: "7070"        
         - name: REDIS_ADDR
           value: "redis-cart:6379"
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:7070"]          
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7070"]
+
 ---
 apiVersion: v1
 kind: Service
@@ -333,9 +418,20 @@ spec:
         volumeMounts:
         - mountPath: /data
           name: redis-data
+        livenessProbe:
+          periodSeconds: 5
+          tcpSocket:
+            port: 6379
+        readinessProbe:
+        initialDelaySeconds: 5
+          periodSeconds: 5
+          tcpSocket:
+            port: 6379
+
       volumes:
       - name: redis-data
         emptyDir: {}
+        
 
 
          
@@ -345,7 +441,7 @@ kind: Service
 metadata:
   name: redis-cart
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     app: redis-cart
   ports:
@@ -391,6 +487,16 @@ spec:
           value: "checkoutservice:5050"
         - name: AD_SERVICE_ADDR
           value: "adservice:9555"
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:5050"]             
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:5050"]
+
+
 
           
 
@@ -414,6 +520,7 @@ kind: Deployment
 metadata:
   name: frontend
 spec:
+  replicas: 2
   selector:
     matchLabels:
       app: frontend
@@ -444,6 +551,15 @@ spec:
           value: "checkoutservice:5050"
         - name: AD_SERVICE_ADDR
           value: "adservice:9555"
+        livenessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe","-addr=:8080"] 
+        readinessProbe:
+          periodSeconds: 5
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:8080"]
+
 
 ---
 apiVersion: v1
